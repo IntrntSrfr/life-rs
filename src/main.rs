@@ -6,8 +6,8 @@ use gif::{Encoder, Frame, Repeat};
 
 fn main() {
     let mut g = Game::new(16, 16, true).unwrap();
-    g.run(250, true, 250);
-    g.export(16, 16)
+    g.run(250, false, 250);
+    g.export(16, 16).unwrap();
 }
 
 #[derive(Debug)]
@@ -33,19 +33,19 @@ impl Game {
             if display { self.grid.display() }
             self.history.push(self.buf_grid.clone());
             self.step();
-            if delay != 0{
-                thread::sleep(time::Duration::from_millis(delay));
-            }
+            if display && delay != 0 { thread::sleep(time::Duration::from_millis(delay)) }
         }
     }
 
     fn step(&mut self) {
         self.grid.step(&mut self.buf_grid);
         self.grid = self.buf_grid.clone();
-
     }
 
-    fn export(&self, h: u16, w: u16) {
+    fn export(&self, h: u16, w: u16) -> Result<(), String> {
+        if self.history.len() <= 0 {
+           return Err("no frames to export".to_string()); 
+        }
         let palette =&[0xFF, 0xFF, 0xFF, 0, 0, 0];
         let mut f = File::create("./out.gif").unwrap();
         let mut encoder = Encoder::new(&mut f, w, h, palette).unwrap();
@@ -57,9 +57,9 @@ impl Game {
             frame.width = w;
             frame.height = h;
             frame.buffer = Cow::from_iter(g.clone().data.into_iter());
-            //println!("{:?}", frame);
             encoder.write_frame(&frame).unwrap()
         }
+        Ok(())
     }
 }
 
