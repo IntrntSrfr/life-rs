@@ -40,7 +40,6 @@ impl Game {
     }
 
     fn step(&mut self) {
-        //self.grid = self.buf_grid.clone()
         self.grid.step(&mut self.buf_grid);
         self.grid = self.buf_grid.clone();
 
