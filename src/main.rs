@@ -5,9 +5,9 @@ use std::fs::File;
 use gif::{Encoder, Frame, Repeat};
 
 fn main() {
-    let mut g = Game::new(16, 16, true).unwrap();
+    let mut g = Game::new(128, 256, true, 0.5).unwrap();
     g.run(250, false, 250);
-    g.export(16, 16).unwrap();
+    g.export(128, 256).unwrap();
 }
 
 #[derive(Debug)]
@@ -15,23 +15,27 @@ struct Game {
     grid: Grid,
     buf_grid: Grid,
     history: Vec<Grid>,
-    rng: ThreadRng,
+    _rng: ThreadRng,
+    height: i32,
+    width: i32,
 }
 
 impl Game {
-    fn new(h: i32, w: i32, wrap: bool) -> Result<Self, String> {
+    fn new(h: i32, w: i32, wrap: bool, p: f32) -> Result<Self, String> {
         Ok(Game {
-            grid: Grid::new(h, w, wrap)?.randomize().to_owned(),
+            grid: Grid::new(h, w, wrap)?.randomize(p).clone(),
             buf_grid: Grid::new(h, w, wrap)?,
             history: Vec::new(),
-            rng: thread_rng(),
+            _rng: thread_rng(),
+            height: h,
+            width: w,
         })
     }
 
     fn run(&mut self, iterations: i32, display: bool, delay: u64) {
         for _ in 0..iterations {
             if display { self.grid.display() }
-            self.history.push(self.buf_grid.clone());
+            self.history.push(self.grid.clone());
             self.step();
             if display && delay != 0 { thread::sleep(time::Duration::from_millis(delay)) }
         }
@@ -42,21 +46,31 @@ impl Game {
         self.grid = self.buf_grid.clone();
     }
 
-    fn export(&self, h: u16, w: u16) -> Result<(), String> {
+    fn export(&self, h: i32, w: i32) -> Result<(), String> {
         if self.history.len() <= 0 {
            return Err("no frames to export".to_string()); 
         }
-        let palette =&[0xFF, 0xFF, 0xFF, 0, 0, 0];
+        if h <= 0 || w <= 0{
+            return Err("dimensions must be positive".to_string());
+        }
+        let palette =&[0, 0, 0, 0xFF, 0xFF, 0xFF];
         let mut f = File::create("./out.gif").unwrap();
-        let mut encoder = Encoder::new(&mut f, w, h, palette).unwrap();
+        let mut encoder = Encoder::new(&mut f, w as u16, h as u16, palette).unwrap();
         encoder.set_repeat(Repeat::Infinite).unwrap();
 
+        let scale = (h as f32/self.height as f32, w as f32/self.width as f32);
         for g in &self.history{
+            let mut scaled: Vec<u8> = std::iter::repeat(0).take((h * w) as usize).collect();
+            for y in 0..h{
+                for x in 0..w{
+                    scaled[(y*w+x) as usize] = g.clone().data[(y as f32/scale.0 * self.width as f32 + x as f32/scale.1) as usize]
+                }
+            }
+
             let mut frame = Frame::default();
-            frame.delay = 25;
-            frame.width = w;
-            frame.height = h;
-            frame.buffer = Cow::from_iter(g.clone().data.into_iter());
+            frame.width = w as u16;
+            frame.height = h as u16;
+            frame.buffer = Cow::from_iter(scaled.into_iter());
             encoder.write_frame(&frame).unwrap()
         }
         Ok(())
@@ -84,10 +98,10 @@ impl Grid {
         });
     }
 
-    fn randomize(&mut self) -> &mut Self {
+    fn randomize(&mut self, p: f32) -> &mut Self {
         for y in 0..self.height {
             for x in 0..self.width {
-                self.set(x, y, if random::<f32>() < 0.5 { 0 } else { 1 })
+                self.set(x, y, if random::<f32>() < p { 0 } else { 1 })
             }
         }
         return self;
