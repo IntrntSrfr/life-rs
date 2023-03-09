@@ -1,8 +1,8 @@
+use gif::{Encoder, Frame, Repeat};
 use rand::prelude::*;
-use std::{thread, time};
 use std::borrow::Cow;
 use std::fs::File;
-use gif::{Encoder, Frame, Repeat};
+use std::{thread, time};
 
 fn main() {
     let mut g = Game::new(128, 256, true, 0.5).unwrap();
@@ -34,10 +34,14 @@ impl Game {
 
     fn run(&mut self, iterations: i32, display: bool, delay: u64) {
         for _ in 0..iterations {
-            if display { self.grid.display() }
+            if display {
+                self.grid.display()
+            }
             self.history.push(self.grid.clone());
             self.step();
-            if display && delay != 0 { thread::sleep(time::Duration::from_millis(delay)) }
+            if display && delay != 0 {
+                thread::sleep(time::Duration::from_millis(delay))
+            }
         }
     }
 
@@ -48,22 +52,23 @@ impl Game {
 
     fn export(&self, h: i32, w: i32) -> Result<(), String> {
         if self.history.len() <= 0 {
-           return Err("no frames to export".to_string()); 
+            return Err("no frames to export".to_string());
         }
-        if h <= 0 || w <= 0{
+        if h <= 0 || w <= 0 {
             return Err("dimensions must be positive".to_string());
         }
-        let palette =&[0, 0, 0, 0xFF, 0xFF, 0xFF];
+        let palette = &[0, 0, 0, 0xFF, 0xFF, 0xFF];
         let mut f = File::create("./out.gif").unwrap();
         let mut encoder = Encoder::new(&mut f, w as u16, h as u16, palette).unwrap();
         encoder.set_repeat(Repeat::Infinite).unwrap();
 
-        let scale = (h as f32/self.height as f32, w as f32/self.width as f32);
-        for g in &self.history{
+        let scale = (h as f32 / self.height as f32, w as f32 / self.width as f32);
+        for g in &self.history {
             let mut scaled: Vec<u8> = std::iter::repeat(0).take((h * w) as usize).collect();
-            for y in 0..h{
-                for x in 0..w{
-                    scaled[(y*w+x) as usize] = g.clone().data[(y as f32/scale.0 * self.width as f32 + x as f32/scale.1) as usize]
+            for y in 0..h {
+                for x in 0..w {
+                    scaled[(y * w + x) as usize] = g.clone().data
+                        [(y as f32 / scale.0 * self.width as f32 + x as f32 / scale.1) as usize]
                 }
             }
 
@@ -82,7 +87,7 @@ struct Grid {
     data: Vec<u8>,
     height: i32,
     width: i32,
-    wrap: bool
+    wrap: bool,
 }
 
 impl Grid {
@@ -94,7 +99,7 @@ impl Grid {
             data: std::iter::repeat(0).take((h * w) as usize).collect(),
             height: h,
             width: w,
-            wrap
+            wrap,
         });
     }
 
@@ -127,7 +132,7 @@ impl Grid {
     }
 
     fn at(&self, mut x: i32, mut y: i32) -> u8 {
-        if !self.wrap && (x < 0 || x >= self.width || y < 0 || y >= self.height ) {
+        if !self.wrap && (x < 0 || x >= self.width || y < 0 || y >= self.height) {
             return 0;
         }
         (x, y) = self.get_wrapped_pos(x, y);
@@ -148,7 +153,7 @@ impl Grid {
         for dy in -1..2 {
             for dx in -1..2 {
                 if dy == 0 && dx == 0 {
-                    continue
+                    continue;
                 }
                 count += self.at(x + dx, y + dy) as i32
             }
