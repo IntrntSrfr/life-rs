@@ -5,7 +5,8 @@ use std::fs::File;
 use std::{thread, time};
 
 fn main() {
-    let mut g = Game::new(128, 256, true, 0.5).unwrap();
+    let mut g = Game::new(128, 256, true).unwrap();
+    g.randomize(0.5);
     g.run(250, false, 250);
     g.export(128, 256).unwrap();
 }
@@ -21,15 +22,19 @@ struct Game {
 }
 
 impl Game {
-    fn new(h: i32, w: i32, wrap: bool, p: f32) -> Result<Self, String> {
+    fn new(h: i32, w: i32, wrap: bool) -> Result<Self, String> {
         Ok(Game {
-            grid: Grid::new(h, w, wrap)?.randomize(p).clone(),
+            grid: Grid::new(h, w, wrap)?,
             buf_grid: Grid::new(h, w, wrap)?,
             history: Vec::new(),
             _rng: thread_rng(),
             height: h,
             width: w,
         })
+    }
+
+    fn randomize(&mut self, p: f32){
+      self.grid.randomize(p);
     }
 
     fn run(&mut self, iterations: i32, display: bool, delay: u64) {
@@ -92,7 +97,7 @@ struct Grid {
 
 impl Grid {
     fn new(h: i32, w: i32, wrap: bool) -> Result<Self, String> {
-        if h < 16 || w < 16 {
+        if h < 4 || w < 4 {
             return Err("grid must be at least 16x16".to_string());
         }
         return Ok(Grid {
@@ -113,6 +118,7 @@ impl Grid {
     }
 
     fn step(&mut self, dst: &mut Grid) {
+        dst.data = self.data.clone();
         for y in 0..self.height {
             for x in 0..self.width {
                 let n = self.neighbours(x, y);
