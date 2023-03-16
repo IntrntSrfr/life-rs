@@ -72,7 +72,7 @@ impl Game {
             let mut scaled: Vec<u8> = std::iter::repeat(0).take((h * w) as usize).collect();
             for y in 0..h {
                 for x in 0..w {
-                    scaled[(y * w + x) as usize] = g.clone().data
+                    scaled[(y * w + x) as usize] = g.data
                         [(y as f32 / scale.0 * self.width as f32 + x as f32 / scale.1) as usize]
                 }
             }
@@ -138,19 +138,22 @@ impl Grid {
     }
 
     fn at(&self, mut x: i32, mut y: i32) -> u8 {
-        if !self.wrap && (x < 0 || x >= self.width || y < 0 || y >= self.height) {
+        if x < 0 || x >= self.width || y < 0 || y >= self.height {
+          if !self.wrap{
             return 0;
+          }
+          (x, y) = self.get_wrapped_pos(x, y);
         }
-        (x, y) = self.get_wrapped_pos(x, y);
-
         self.data[(y * self.width + x) as usize]
     }
 
     fn set(&mut self, mut x: i32, mut y: i32, value: u8) {
-        if !self.wrap && (x < 0 || x >= self.width || y < 0 || y >= self.height) {
+        if  x < 0 || x >= self.width || y < 0 || y >= self.height {
+          if !self.wrap {
             return;
+          }
+          (x, y) = self.get_wrapped_pos(x, y);
         }
-        (x, y) = self.get_wrapped_pos(x, y);
         self.data[(y * self.width + x) as usize] = value
     }
 
